@@ -1,0 +1,3367 @@
+var _room = HBInit(
+                        {
+                     //   roomName:"★ Magiczny futbol [24/7]★·.·`¯´·.·🪄",
+                          roomName:"★  Magiczny futbol [24/7] ★·.·`¯´·.·🪄",
+ 
+                        maxPlayers:16,
+                        noPlayer:true,
+                       // password:"123456",
+                        public:true,
+                        }
+ 
+                       );
+ 
+_room.setDefaultStadium("Big");
+_room.setScoreLimit(5);
+_room.setTimeLimit(0);
+_room.setTeamsLock(true);
+ 
+_room.is_playing=0;
+ 
+ 
+//-------------------
+//funciones útiles
+//-------------------
+ 
+function flip_12(f_n)
+{
+ 
+  if(f_n==1)
+  	return(2);
+ 
+  if(f_n==2)
+  	return(1);
+ 
+}
+ 
+ 
+function get_distance(x, y, xx, yy)
+{
+var a = x - xx;
+var b = y - yy;
+ 
+var c = Math.sqrt( a*a + b*b );
+return(c);
+}
+ 
+function angle(cx, cy, ex, ey)
+{
+  var dy = ey - cy;
+  var dx = ex - cx;
+  var theta = Math.atan2(dy, dx); // range (-PI, PI]
+  theta *= 180 / Math.PI; // rads to degs, range (-180, 180]
+  return theta;
+}
+ 
+function move_by_degrees(f_x, f_y,  degrees, dis)
+{
+    var radians = degrees * (Math.PI / 180);
+    f_x += Math.cos(radians) * dis;
+    f_y += Math.sin(radians) * dis;
+    return({x:f_x, y:f_y})
+}
+ 
+ 
+function angle360(cx, cy, ex, ey) 
+{
+  var theta = angle(cx, cy, ex, ey); // range (-180, 180]
+  if (theta < 0) theta = 360 + theta; // range [0, 360)
+  return theta;
+}
+ 
+ 
+ function random_from_array(f_array)	
+ {
+ 
+  let _sel = rand_bet_(0, f_array.length-1);
+  return(f_array[_sel]);
+ 
+ }
+ 
+  function rand_bet_(f_min,f_max) // si max = 3 ; regresa [0,1,2,3]
+  {
+   return(Math.floor(Math.random() * ( (f_max+1) - f_min) ) + f_min); 
+ 
+  }
+ 
+ 
+  function simple_setloop(f_a,f_b)
+  {
+     for(var i in f_b)
+     {
+     	f_a[i] = f_b[i];
+     }
+     return(f_a);
+ 
+  }
+ 
+   function clone_array(obj) {
+ 
+      var clone = [];
+      for(var i in obj) {
+          if(obj[i] != null &&  get_type(obj[i])=="array")
+              clone[i] = clone_array(obj[i]);
+          else
+              clone[i] = obj[i];
+      }
+      return clone;
+    }
+ 
+   function clone_object(obj) 
+   {
+ 
+    if(obj.constructor==undefined || obj.constructor!=undefined && obj.constructor.name!='Object')
+    obj.noclone=1;
+ 
+    if(obj.noclone!==1)
+    {
+ 
+    var clone = {};
+ 
+    for(var i in obj) {
+          if(obj[i] != null &&  get_type(obj[i])=="object") 
+             {
+ 
+            clone[i] = clone_object(obj[i]);
+            }
+ 
+        else if(get_type(obj[i])=="array") 
+         {
+         clone[i] = clone_array(obj[i]);
+         }
+ 
+        else
+        {
+            clone[i] = obj[i];
+        }
+    }
+    return clone;
+    }
+    else
+    {
+      return(obj);
+    }
+ }
+ 
+ 
+ function get_type(f_quien)
+ {
+    if(f_quien==undefined)
+      return ('undefined');
+   let _r = typeof(f_quien);
+   if(Array.isArray(f_quien)) 
+     _r = "array";
+ 
+     return(_r);
+ }
+ 
+ function random_hex(len) 
+ {
+        const hex = '0123456789ABCDEF';
+        let _end_hex = '0x';
+        for (let i = 0; i < len; ++i) {
+            _end_hex += hex.charAt(Math.floor(Math.random() * hex.length));
+        }
+ 
+    return (parseInt(_end_hex) ) ;
+ }
+ 
+//--------------------
+//fin funciones utiles
+//--------------------
+ 
+ 
+ 
+function get_teams_n()
+{
+ 
+       //centrinactivo
+  let _team_n = [0,      0,0]
+     for(var u of _room.getPlayerList())
+     {
+       _team_n[u.team]++;
+     }
+   return(_team_n);
+ 
+}
+ 
+ 
+ 
+_room.onTeamVictory=function(_score)
+{
+let _s = "rojo";
+if(_score.blue>_score.red)
+    _s = "azul"
+ 
+_message.send("Partida finalizada! Ha ganado el equipo " + _s + "!");
+ 
+ 
+ 
+ 
+}
+ 
+_room.onPlayerTeamChange=function(e)
+{
+_message.send('');
+ 
+}
+ 
+_room.onGamePause=function(e)
+{
+_message.send('JUEGO PAUSADO POR ' + e.name);
+ 
+_room.is_playing=0;
+ 
+}
+ 
+_room.onGameUnpause=function(e)
+{
+ 
+_message.send();
+_room.is_playing=1;
+}
+ 
+ 
+_room.onGameStop=function(e)
+{
+_message.set('hub');
+_message.send('');
+_botges.delete();
+poderes_reset(1);
+ 
+_room.is_playing=0;
+ 
+}
+ 
+ 
+_room.onPlayerJoin=function(e)
+{
+ 
+  if(_message.name!=="hub")
+    _message.send('Hola ' + e.name + ": para lanzar un poder tienes que escribir su nombre. ");
+ 
+    else
+    _message.send('');
+ 
+ 
+set_custom_var(e, ['magic', 0])
+set_custom_var(e, ['name' , e.name])
+ 
+ 
+update_magic(e);
+ 
+if( (e.name=="Bot-00" ||e.name=="bot-00" ||e.name=="Bot-01" || e.name=="bot-01" )&&e.id==1   )
+{
+ 
+  if(e.admin==false)
+    {
+    _room.setPlayerAdmin(1,true)
+ 
+    _message.send("Se le ha dado ADMIN a " + e.name, {color: COL.text.meta});
+    }
+ 
+}
+ 
+/*//admin
+     let _l = _room.getPlayerList();
+ 
+     if(_l.length<=1)
+     {
+     _room.setPlayerAdmin(_l[0].id, true);
+ 
+     }
+  */   
+ 
+ 
+ 
+ 
+   let _team_n = get_teams_n();
+ 
+      //if(_team_n[1]+_team_n[2]<6)
+      //{
+       if(_team_n[1]<_team_n[2])
+ 
+        _room.setPlayerTeam(e.id, 1);
+ 
+ 
+       else if(_team_n[2]<_team_n[1])
+        _room.setPlayerTeam(e.id, 2);
+ 
+ 
+       else if(_team_n[1]==_team_n[2])
+        _room.setPlayerTeam(e.id, 1);
+      //}
+ 
+}
+ 
+ 
+ 
+_room.onPlayerLeave=function(e)
+{
+ 
+  for(var i = _efectos_activos.length-1;i>=0;i--)
+  {
+  	let u = _efectos_activos[i];
+ 
+  	if(u.player.id==e.id)
+  	{
+  		_efectos_activos.splice(i,1)
+  	}
+  }
+ 
+  _message.send("Adios " + e.name);
+ 
+ 
+ 
+}
+ 
+ 
+ 
+//colores determinados
+ 
+var COL=
+    {
+     disc:
+     {
+      pl1:0xFF0000,
+      pl2:0x0000FF,
+      pl1_lock:0x772c2c,
+      pl2_lock:0x383b71,
+      pl_negros:0x000000,
+     },
+ 
+     text:
+     {
+     meta:0xa487cc,
+     magia:0x00FF00,
+ 
+     pl1:0xFF0000,
+     pl2:0x0000fF,
+     pl1_soft:0xe88e8e, 
+     pl2_soft:0x8ea7e8,
+     error:0xFF0000,
+     }
+ 
+    }
+ 
+ //intervalo empleado para otorgar admin segun usurarios activos
+var GLOBAL_CLOCK = setInterval(function()
+                            {
+ 
+                            let _l = _room.getPlayerList();
+                               let _admin =0;
+                               for(var u of _l)
+                               {
+                                 if(u.admin)
+                                 {
+                                 	_admin=1;
+                                 	break;
+                                 }
+                               }
+                               if(_admin==0 && _l.length>0)
+                               {
+                               	  _room.setPlayerAdmin(_l[0].id, true)
+ 
+                                  _message.send("Se le ha dado ADMIN a " + _l[0].name, {color:COL.text.meta});
+ 
+ 
+                               }
+ 
+                            }, 1000
+ 
+ 
+	                        )
+ 
+ 
+ 
+ 
+_room.onTeamGoal=function(e)
+{
+let _c = ["", COL.text.pl1_soft, COL.text.pl2_soft];
+let _t = ["", "rojo", "azul"]
+ 
+  _message.send("GOL del equipo " + _t[e], {color: _c[e] });
+ 
+ 
+ for(var i = _efectos_activos.length-1;i>=0;i--)
+  {
+    let u = _efectos_activos[i];
+ 
+    if(u.onend_on_goal)
+    {
+      u.onend(u.player);
+      _efectos_activos.splice(i,1)
+    }
+  }
+ 
+ 
+ 
+}
+ 
+_room.onPositionsReset=function()
+{
+ _room.firstKick=0;
+ poderes_reset();
+ update_magic('all');
+ set_team_color();
+ 
+ _botges.send_event('reset');
+ 
+_message.send("",{sound:0});
+}
+ 
+ 
+_room.onPlayerBallKick=function(e)
+{
+  for(var u of _efectos_activos)
+  {
+    if(u.onballkick!==undefined && u.player.id==e.id )
+    {
+       u.onballkick(e); 
+    }
+  	if(u.name=='messi'&&u.player.id==e.id)
+  	{
+    let _p = _room.getDiscProperties(0);
+ 
+    _room.setDiscProperties(0,  {xspeed:_p.xspeed*2,yspeed:_p.yspeed*2  })
+	}
+ 
+  }
+ 
+ 
+ if(_poderes.iman.HIT_TT>0)
+ {
+  let _p = _room.getDiscProperties(0);
+ 
+  _room.setDiscProperties(0, 
+ 
+                              {xspeed:_p.xspeed*2,yspeed:_p.yspeed*2  }
+                             );
+ 
+ // _poderes.iman.HIT_TT=0;
+ }
+ 
+}
+ 
+ 
+ 
+_room.onPlayerChat=function(e, _text)
+{
+ 
+  for(var i in _poderes)
+  {
+    let u = _poderes[i];
+ 
+    if(e.team==0 || _room.is_playing==0) //evitar aplicar poderes en spectators
+    {
+    	break;
+    }
+ 
+    if(_text.toLowerCase()==i ||  _text.toLowerCase()==u.atajo)
+    {
+    	if( _text.toLowerCase()==u.atajo )
+    		_text = i;
+ 
+    	_text = _text.toLowerCase();
+ 
+       let _crear = 1;
+       if(u.repeat!==1)
+       {
+	       for(var o of _efectos_activos) //evitar repeticion poder
+	       {
+	       if(o.player.id==e.id && (o.name == _text || o.atajo == _text ) && o.player.team == e.team)
+	         {
+	           _crear = 0;
+	           break;
+ 
+	         } 
+	       }
+	    }   
+ 
+     if(_crear)
+     {
+ 
+     	let _magic = get_custom_var(e,'magic');
+ 
+        if(_magic-u.precio>=0)
+        {
+   	   _message.send(e.name + " ha usado " + _text,  {color: COL.text.magia} );
+ 
+      let _u = clone_object(u);
+ 
+      update_magic(e, _u.precio,2);
+ 
+ 
+           //eliminar segun delete del poder
+          for(var j = _efectos_activos.length-1;j>=0;j--)
+         {
+         	let o = _efectos_activos[j];
+         	if(_u.delete!==undefined && ( _u.delete[1]=='all' || _u.delete[1]=='own' && o.player.id==e.id 
+         	                             ||_u.delete[1]=='ownteam' && o.player.team == e.team  ) )
+         	{
+         		for(var d of _u.delete[0])
+         		{
+                   if(o.name == d)
+                   {
+                   //_room.sendAnnouncement('delete ' + _u.delete[1] )
+                   _efectos_activos.splice(j,1);
+                   }
+         		}
+         	}
+         }
+ 
+          _u.player = e;
+          _u.name = _text;
+ 
+          _efectos_activos.push(_u)
+ 
+          _u.onload(e);
+ 
+            return;
+       }
+ 
+       else
+       {
+       //	function _message(f_text="", f_target= null , f_color=0xFFFFFF,  f_Style='bold', f_sound=0)
+ 
+       _message.send(e.name + " no tienes suficiente magia para " + _text + " [ $"+u.precio+" ]", {color:COL.text.error, sound:2});
+            return;
+ 
+       }
+ 
+ 
+      }
+ 
+ 
+    }
+ 
+ 
+ 
+  }
+ 
+_message.send(e.name + ": " + _text);
+ 
+}
+ 
+ 
+ 
+ 
+function poderes_reset(f_hard = 0)
+{
+    //_room.setTeamColors(1, 0, 0xFFFFFF, [0xFF0000]);       
+    //_room.setTeamColors(2, 0, 0xFFFFFF, [0x0000FF]);  
+    set_team_color();
+ 
+    to_all( function(e){  
+                            _room.setPlayerDiscProperties(e.id, {radius:15} );
+ 
+                             }  );
+ 
+    if(f_hard)
+      _efectos_activos=[];
+ 
+    else
+    {
+	    for(var i = _efectos_activos.length-1;i>=0;i--)
+	    {
+	    let u = _efectos_activos[i];
+ 
+	      if(u.name!=='bot')
+	      {
+	      	_efectos_activos.splice(i,1);
+	      }
+ 
+	    }
+	}
+ 
+ 
+    _room.efecto_tt[0]=0;
+ 
+    set_custom_var('all', ['locked', 0])
+    set_custom_var('all', ['negros', 0])
+ 
+ 
+ 
+    reset_discs();
+ 
+}
+ 
+ 
+ 
+ 
+var _message=
+ {
+    history:[],
+    send(f_text="", f_data={})
+    {
+ 
+         let _data = simple_setloop(
+							         {
+							         target:null,
+                                     color:0xFFFFFF,
+							         style:'bold',
+							         sound:1,
+ 
+							         time:0,
+							         },
+							         f_data
+							        );
+ 
+     if(f_text!=="")
+     this.history.push({texto:f_text, data:_data});
+ 
+ 
+ 
+      for(var u of _message.act)
+      {
+    	_room.sendAnnouncement(u[0], u[1], u[2], u[3], u[4]);
+      }
+ 
+     for(var i=0;i<3;i++)
+     {
+      //     _room.sendAnnouncement(f_text, _data.target,  _data.color, _data.style,_data.sound);
+ 
+       let u = this.history[ (this.history.length-1) -2+i];
+ 
+       if(u==undefined)
+       {
+         _room.sendAnnouncement("", null, 0xFFFFFF, 'bold', 0);
+ 
+          continue;
+       }
+ 
+ 
+       if(i==2)
+       _room.sendAnnouncement(u.texto, u.data.target, u.data.color, u.data.style, u.data.sound);
+ 
+       else
+       _room.sendAnnouncement(u.texto, u.data.target, u.data.color, u.data.style, 0);
+ 
+     }
+ 
+ 
+    },
+    set(f_name)
+    {
+    _message.name = f_name;
+    _message.act = _message.modos[f_name]; 
+    },
+    act:"",
+    name:"",
+    modos:
+    {
+      hub:
+       [
+        // ["-------------------------------------------------------------------------------------------",null, 0xFFFFFF, 'bold',0],
+        // ["       Haxball Mágico v 0.08               Programado por SrBot                 ",null, 0xFFFFFF, 'bold',0],
+         ["━━━━[  Haxball Mágico v0.10 by SrBot        pastebin.com/6NAaRKVA ]━━━━━",null, 0xFFFFFF, 'bold',0],
+         ["   Para usar estos poderes: burger  messi  veloz  barrera                  ",null, 0xFFFFFF, 'bold',0],
+         ["      Solo debes escribir la inicial en el chat                               ",null, 0xFFFFFF, 'bold',0],
+ 
+        ],//hub   
+ 
+      ingame:
+       [
+     //    ["-------------------------------------------------------------------------------------------",null, 0xFFFFFF, 'bold',0],
+     //    ["                                    Poderes                                       ",null, 0xFFFFFF, 'bold',0],
+         ["━━━━━━━━━━━━━━━[PODERES]━━━━━━━━━━━━━━━━━━━━",null, 0xFFFFFF, 'bold',0],
+         ["   b̲urger    m̲essi     v̲eloz      d̲rain      i̱man               b̲a̲rrera",null, 0xFFFFFF, 'bold',0], 
+         ["   $5            $10        $15         $15         $20                  $20",null, 0xFFFFFF, 'bold',0],
+ 
+        ],//hub   
+ 
+ 
+    }
+ 
+ }
+ 
+ 
+ 
+    _message.set('hub');
+ 
+ 
+ 
+_room.onGameStart = function()
+{
+ 
+ _message.set('ingame');
+ 
+ _message.send();
+ 
+ 
+_room.is_playing=1;
+ 
+ 
+ _room.firstKick=0;
+ 
+ set_custom_var('all', ['magic', 5])
+ 
+ 
+ _botges.delete();
+ _botges.ini();
+ set_team_color();
+ 
+ 
+ _room.goal_pos = [
+                   _room.getDiscProperties(2),
+                   _room.getDiscProperties(1),
+                   _room.getDiscProperties(4),
+                   _room.getDiscProperties(3)
+                   ];
+ 
+ 
+ 
+  poderes_reset(1);
+ 
+   update_magic('all');
+ 
+ 
+ 
+}
+ 
+_room.onStadiumChange=function(_name, _player)
+{
+  _room.mapName = _name;
+ 
+ 
+ 
+ 
+ if(_room.FOO!==1)
+ {
+// _room.sendAnnouncement("no")
+ _room.FOO=1;
+ _room.FOO2=_player;
+ 
+  _room.setCustomStadium(_MAP);
+ 
+ }
+ else
+ {
+ //_room.sendAnnouncement("si")
+   if(_room.FOO2)
+   _message.send( _room.FOO2.name + " no puedes cambiar el estadio.", {color:COL.text.error, sound:2} )
+ 
+ 	_room.FOO=0;
+ 	_room.FOO2=undefined;
+ }
+ 
+ 
+ 
+ 
+}
+ 
+ 
+ 
+var _maps =
+   {
+    "Big":
+                  {
+                     run(u)
+                        {
+ 
+ 
+                          if(_room.firstKick)
+                           {
+ 
+ 
+                            let _prop = _room.getPlayerDiscProperties(u.id);
+ 
+                         //   _room.setPlayerDiscProperties(u.id, {radius: _prop.radius+1}  );                              
+ 
+                           }
+ 
+ 
+ 
+ 
+                      }//run
+ 
+                 },   //fin 2
+ 
+ 
+ 
+   }
+ 
+ 
+ 
+var _poderes =
+     {
+ 
+ 
+ 
+                     'burger':
+                       {
+                        precio:5,
+                        atajo:'b',
+                        descripcion:" ",
+ 
+                        tt:[0,60*8],
+                        player:"",
+                        _r:0,
+                        _m:[0,0],
+                        estado:0, //inflaro, estacionario, desinflar
+                        delete:[ ['burgerking','messi'],'own' ],
+                        repeat:0,
+ 
+                        onload(u)
+                         {
+                          this._r=_room.getPlayerDiscProperties(u.id).radius;
+                          //_room.sendAnnouncement(this._r.toString() )
+ 
+                          this._m[0]=15;
+                      //    this._m[1]=15+30;
+                          this._m[1]=15+15;
+ 
+                          this.estado=0; 
+                         },
+ 
+ 
+                        enterframe(u)
+                         {
+                         	let _m = this._m;
+                         	if(this.estado==0)
+                         	{
+                             this._r += ((_m[1]+5)-this._r)/20;
+                              if(this._r>_m[1])
+                              {
+                              this.estado=1;                         
+                         	  }
+                              _room.setPlayerDiscProperties(u.id, {radius: Math.floor(this._r)   } );
+ 
+                         	}
+                         	if(this.estado==1)
+                         	{
+                              if(this.tt[0]>this.tt[1]-(60*2) )
+                              {
+                              	this.estado=2;
+                              }
+                         	}
+ 
+                            if(this.estado==2)
+                         	{
+                              this._r += ((_m[0]-5)-this._r)/20;
+                              if(this._r<_m[0])
+                              {
+                              this.estado=4;
+                              this._r = _m[0];                         
+                         	  }
+                         	 _room.setPlayerDiscProperties(u.id, {radius: Math.floor(this._r)   } );
+ 
+                         	}
+ 
+ 
+                         },
+ 
+                         onend(u)
+                         {
+                         _room.setPlayerDiscProperties(u.id, {radius: this._m[0] } );
+                        // _room.sendAnnouncement("end")
+                         }
+ 
+                       },
+ 
+ 
+                     'burgerking':
+                       {
+                        precio:40,
+                        atajo:'burgerking',
+                        descripcion:" ",
+                        tt:[0,60*20],
+                        player:"",
+                        _r:0,
+                        _m:[0,0],
+                        estado:0, //inflaro, estacionario, desinflar
+                        delete:[['messi','burger'],'own' ],
+                        repeat:0,
+ 
+                        onload(u)
+                         {
+                          this._r=_room.getPlayerDiscProperties(u.id).radius;
+                          //_room.sendAnnouncement(this._r.toString() )
+ 
+                          this._m[0]=15;
+                          this._m[1]=15+60;
+                          this.estado=0; 
+                         },
+ 
+ 
+                        enterframe(u)
+                         {
+                         	let _m = this._m;
+                         	if(this.estado==0)
+                         	{
+                             this._r += ((_m[1]+5)-this._r)/20;
+                              if(this._r>_m[1])
+                              {
+                              this.estado=1;                         
+                         	  }
+                              _room.setPlayerDiscProperties(u.id, {radius: Math.floor(this._r)   } );
+ 
+                         	}
+                         	if(this.estado==1)
+                         	{
+                              if(this.tt[0]>this.tt[1]-(60*2) )
+                              {
+                              	this.estado=2;
+                              }
+                         	}
+ 
+                            if(this.estado==2)
+                         	{
+                              this._r += ((_m[0]-5)-this._r)/20;
+                              if(this._r<_m[0])
+                              {
+                              this.estado=4;
+                              this._r = _m[0];                         
+                         	  }
+                         	 _room.setPlayerDiscProperties(u.id, {radius: Math.floor(this._r)   } );
+ 
+                         	}
+ 
+ 
+                         },
+ 
+                         onend(u)
+                         {
+                         _room.setPlayerDiscProperties(u.id, {radius: this._m[0] } );
+                         //_room.sendAnnouncement("end")
+                         },
+ 
+ 
+                          onballkick(u)
+                          {
+ 
+                          let _b = _room.getDiscProperties(0);
+ 
+                          _room.setDiscProperties(0,  {xspeed:_b.xspeed*2,yspeed:_b.yspeed*2  })
+ 
+ 
+                          },
+ 
+                       },
+ 
+                 //end superburger
+ 
+ 
+                     'messi':
+                       {
+                        precio:10,//10
+                        atajo:'m',
+                        descripcion:" ",
+                        tt:[0,60*12],
+                        player:"",
+                        _r:0,
+                        _m:[0,0],
+                        estado:0, //inflaro, estacionario, desinflar
+                        delete:[ ['burger','burgerking'], 'own'],
+                        repeat:0,
+ 
+                        onload(u)
+                         {
+                          this._r=_room.getPlayerDiscProperties(u.id).radius;
+                          //_room.sendAnnouncement(this._r.toString() )
+ 
+                          this._m[0]=15;
+                          this._m[1]=8;
+                          this.estado=0; 
+                         },
+ 
+ 
+                        enterframe(u)
+                         {
+                         	let _m = this._m;
+                         	if(this.estado==0)
+                         	{
+                             this._r += ((_m[1]-5)-this._r)/20;
+                              if(this._r<_m[1])
+                              {
+                              this.estado=1;                         
+                         	  }
+                              _room.setPlayerDiscProperties(u.id, {radius: Math.floor(this._r)   } );
+ 
+                         	}
+                         	if(this.estado==1)
+                         	{
+                              if(this.tt[0]>this.tt[1]-(60*1) )
+                              {
+                              	this.estado=2;
+                              }
+                         	}
+ 
+                            if(this.estado==2)
+                         	{
+                              this._r += ((_m[0]+5)-this._r)/20;
+                              if(this._r>_m[0])
+                              {
+                              this.estado=4;
+                              this._r = _m[0];                         
+                         	  }
+                         	 _room.setPlayerDiscProperties(u.id, {radius: Math.floor(this._r)   } );
+ 
+                         	}
+ 
+ 
+                         },
+ 
+                         onend(u)
+                         {
+                         _room.setPlayerDiscProperties(u.id, {radius: this._m[0] } );
+                         //_room.sendAnnouncement("end")
+                         }
+ 
+                       },
+ 
+                       //end messi
+ 
+ 
+ 
+                      'veloz':
+                       {
+                        precio:15,
+                        atajo:'v',
+                        descripcion:" ",
+                        tt:[0,60*10],
+                        player:"",
+                        delete:[[],'own'],
+                        repeat:0,
+ 
+                        onload(u)
+                         {
+ 
+                         },
+ 
+ 
+                        enterframe(u)
+                         {
+                         	let _p = _room.getPlayerDiscProperties(u.id);
+                         	if(_p && _p.xspeed &&_p.yspeed)
+                         	{
+                          _room.setPlayerDiscProperties(u.id, {xgravity:_p.xspeed/80,
+                                                               ygravity:_p.yspeed/80  }    );
+                         //   _room.setDiscProperties(0,  {xspeed:_p.xspeed*2,yspeed:_p.yspeed*2  })
+                            }
+ 
+ 
+                         },
+ 
+                         onend(u)
+                         {
+                                   _room.setPlayerDiscProperties(u.id, {xgravity:0,
+                                                                        ygravity:0 }    );
+ 
+                         }
+ 
+                       },
+ 
+ 
+ 
+                      'iman':
+                       {
+                        precio:20,
+                        atajo:'i',
+                        descripcion:" ",
+                        tt:[0,60*10],
+                        player:"",
+                        delete:[[],'own'],
+                        repeat:0,
+ 
+                        HIT_TT:0, //emplear macro objeto (no local)
+ 
+                        onload(u)
+                         {
+ 
+/*
+                           let _p = _room.getPlayerDiscProperties(u.id);
+                           let _b = _room.getDiscProperties(0);
+ 
+                           let _d = move_by_degrees( _b.x,_b.y, angle360(_b.x,_b.y,   _p.x,_p.y ),5  )
+ 
+                            _room.setDiscProperties(0, {xspeed:-(_b.x-_d.x)/(3) ,
+                                                        yspeed:-(_b.y-_d.y)/(3) })
+ 
+  */                        
+                         },
+ 
+ 
+ 
+ 
+ 
+                      enterframe(u)
+                      {
+ 
+ 
+                          let _p = _room.getPlayerDiscProperties(u.id);
+                          let _b = _room.getDiscProperties(0);
+ 
+                          let _dis = get_distance(_p.x, _p.y,  _b.x, _b.y)/5;
+ 
+                          let _pfren = move_by_degrees( _p.x,_p.y, angle360(_p.x,_p.y,   _b.x,_b.y ),18  );
+ 
+ 
+ 
+//                             _room.sendAnnouncement('X: ' + _p.x + "  Y: " + _p.y)
+ 
+                             let _d = 5;
+                             if(_dis>10)_d=8;               
+                             if(_dis>20)_d=12;
+ 
+                             let _xs = (_pfren.x -_b.x)/_d ;
+                             let _ys = (_pfren.y -_b.y)/_d ;
+ 
+ 
+ 
+ 
+                  //bola pegada al jugador dis = 5.6
+ 
+                                 if(_dis<30-_poderes.iman.HIT_TT &&
+                                    _p.x>-700&&_p.x<700
+                                   // _p.y>-320&&_p.y<320
+                                    )                                
+                                  {
+                                     _poderes.iman.HIT_TT=30;
+ 
+ 
+                                     _room.setDiscProperties(0, {
+                                                                // x: _b.x+ (_p.x-_b.x )/5,
+                                                                 //y: _b.y+ (_p.y-_b.y )/5   
+                                                                 xspeed:_xs,
+                                                                 yspeed:_ys,
+                                                    //             xgravity: 0,
+                                                      //           ygravity: 0,   
+ 
+                                                                 }
+                                                                 );
+ 
+                                  }
+ 
+ 
+                                  //speed 
+                            if(_p && _p.xspeed &&_p.yspeed)
+                          {
+                          _room.setPlayerDiscProperties(u.id, {xgravity: -_p.xspeed/50,
+                                                               ygravity: -_p.yspeed/50}    );
+                         //   _room.setDiscProperties(0,  {xspeed:_p.xspeed*2,yspeed:_p.yspeed*2  })
+                          }
+ 
+                      },
+ 
+                       onballkick(u)
+                       {
+                       //_room.sendAnnouncement("jaja");
+                       this.tt[0]=this.tt[1];
+                       },
+ 
+                         onend(u)
+                         {
+                                   _room.setDiscProperties(0, {
+                                                                xgravity:0,
+                                                                  ygravity:0,
+                                                                //  xspeed:0,
+                                                                // yspeed:0
+                                                              }    );
+ 
+                                 _room.setPlayerDiscProperties(u.id, {xgravity:0,
+                                                                      ygravity:0 }    );
+ 
+ 
+                         }
+ 
+                       },
+ 
+ 
+ 
+ 
+                      'bubblegum':
+                       {
+                        precio:10,
+                        atajo:'bubblegum',
+                        descripcion:" ",
+                        tt:[0,60*20],
+                        player:"",
+                        delete:[[],'own'],
+                        repeat:0,
+ 
+                        onload(u)
+                         {
+ 
+                         _room.setPlayerDiscProperties(u.id, {bCoeff:5} );                         
+                         // _room.setPlayerDiscProperties(u.id, {radius:5} );
+ 
+                         },
+                         onend(u)
+                         {
+                         _room.setPlayerDiscProperties(u.id, {bCoeff:0.5} );                         
+ 
+                         }
+ 
+                       },
+ 
+ 
+                      'negros':
+                       {
+                        precio:20,//20
+                        atajo:'negros',
+                        descripcion:" ",
+                        tt:[0,60*15],
+                        player:"",
+                        delete:[['negros'],'all'],
+                        disable_avatar_update:'all',
+                        repeat:1,
+ 
+                        onload(u)
+                         {
+                             set_team_color( [ [COL.disc.pl_negros],[COL.disc.pl_negros] ] );
+ 
+ 
+                              to_all(function(e){
+                                       	set_custom_var(e, ['negros', 1])
+ 
+                              	        if(get_type(_custom_vars[e.id].locked)!=='array' ) //!
+                              	        {
+                                        _room.setPlayerAvatar(e.id,'?')
+                                        }
+ 
+                                       }  )
+ 
+ 
+                         },
+                         onend(e)
+                         {
+                         	  set_team_color();
+ 
+                                       to_all(function(e){
+ 
+                                      set_custom_var(e, ['negros',0])
+ 
+                                       } )
+ 
+ 
+                               update_magic('all');
+                              //_room.sendAnnouncement("end")
+                         },
+ 
+ 
+                       },
+ 
+ 
+////////////
+ 
+                      'miniball':
+                       {
+                        precio:25,
+                        atajo:'miniball',
+                        descripcion:" ",
+                        tt:[0,200*20],
+                        player:"",
+                        delete:[['bigball'],'all'],
+                      //  disable_avatar_update:'all',
+                        repeat:0,
+ 
+                        onload(u)
+                         {
+                         _room.setDiscProperties(0, {radius:6});
+ 
+ 
+                         },
+                         onend(u)
+                         {
+                         _room.setDiscProperties(0, {radius:10});                          
+                         },
+ 
+ 
+                       },
+ 
+ 
+                      'bigball':
+                       {
+                        precio:25,
+                        atajo:'bigball',
+                        descripcion:" ",
+                        tt:[0,100*20],
+                        player:"",
+                        delete:[['miniball'],'all'],
+                      //  disable_avatar_update:'all',
+                        repeat:0,
+ 
+                        onload(u)
+                         {
+                         _room.setDiscProperties(0, {radius:15});
+ 
+ 
+                         },
+                         onend(u)
+                         {
+                         _room.setDiscProperties(0, {radius:10});                          
+                         },
+ 
+ 
+                       },
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+                      'spy':
+                       {
+                        precio:30,
+                        atajo:'s',
+                        descripcion:" ",
+                        tt:[0, 60*20],
+                        player:"",
+                        delete:[[],'own'],
+                      //  disable_avatar_update:'own',
+                        repeat:0,
+                        onend_on_goal:1,
+ 
+                        onload(u)
+                         {
+ 
+ 
+                          _room.sendAnnouncement(u.id + " ")
+ 
+                          let _p =  _room.getPlayerDiscProperties(u.id);
+                          let _xyprev =  {x: _p.x, 
+                                          y:_p.y,  
+                                          xspeed: _p.xspeed, 
+                                          yspeed: _p.yspeed,
+                                          radius: _p.radius}
+ 
+ 
+                         _room.setPlayerTeam(u.id, flip_12(u.team) );
+ 
+                         //bug fixer
+                       //  this.player.team= flip_12(this.player.team)
+ 
+                         //bug fixer
+                         for(var _u of _efectos_activos)
+                         {
+                          if(_u.player.id==u.id)
+                          {
+                            //  this.player.team= flip_12(this.player.team)
+                            _u.player.team = flip_12(_u.player.team)
+                          }
+                         }
+ 
+                         _room.setPlayerDiscProperties(u.id, _xyprev)
+ 
+ 
+ 
+                         },
+                         onend(u)
+                         {
+ 
+ 
+                          let _p =  _room.getPlayerDiscProperties(u.id);
+                          let _xyprev =  {x: _p.x, 
+                                          y:_p.y,  
+                                          xspeed: _p.xspeed, 
+                                          yspeed: _p.yspeed,
+                                          radius: _p.radius}
+ 
+ 
+ 
+                         _room.setPlayerTeam(u.id, flip_12(u.team) );
+ 
+                        // _room.setPlayerTeam(u.id, flip_12(u.team) );
+ 
+                         //bug fixer
+                         for(var _u of _efectos_activos)
+                         {
+                          if(_u.player.id==u.id)
+                          {
+                            //  this.player.team= flip_12(this.player.team)
+                            _u.player.team = flip_12(_u.player.team)
+                          }
+                         }
+ 
+                         _room.setPlayerDiscProperties(u.id, _xyprev)
+ 
+ 
+ 
+ 
+                         },
+ 
+ 
+                       },
+ 
+ 
+ 
+                      'kill':
+                       {
+                        precio:50,
+                        atajo:'kill',
+                        descripcion:" ",
+                        tt:[0, 55*20],
+                        player:"",
+                        delete:[['drain'],'own'],
+                        disable_avatar_update:'own',
+                        repeat:0,
+                        kill_tt:[0,4],
+                        onend_on_goal:1,
+ 
+                        onload(u)
+                         {
+ 
+                          let _p =  _room.getPlayerDiscProperties(u.id);
+                          _room.setPlayerAvatar(u.id,'🔪')
+ 
+ 
+ 
+                         },
+ 
+                         enterframe(u)
+                         {
+                          let _p =  _room.getPlayerDiscProperties(u.id);
+ 
+                          let _ps = _room.getPlayerList();
+ 
+                         //     _room.sendAnnouncement("dasdsa");
+                          this.kill_tt[0]++;
+                          if(this.kill_tt[0]>this.kill_tt[1])
+                          {
+                            this.kill_tt[0]=0;
+                              for(var _u of _ps)
+                              {
+                                let _up = _room.getPlayerDiscProperties(_u.id);
+ 
+                                if(_u.team>0&& _u.team!==u.team&&                         //32
+                                   get_distance(_p.x, _p.y, _u.position.x, _u.position.y)<(32-15-15)+_p.radius+_up.radius)
+                                {
+ 
+                                 // _room.sendAnnouncement("dasdsa");
+                                  _message.send('!', {color: 0xFF0000} );
+ 
+                                  let _actmagic = get_custom_var(_u,'magic');
+                                  set_custom_var(_u, ['magic', _actmagic -1  ]);
+                                  if(_actmagic<=0)
+                                  {
+                                  _room.kickPlayer(_u.id, '¡Te ha matado ' + _custom_vars[u.id].name + '!');  
+                                  }
+                                  update_magic('all');
+ 
+                                }
+                              }
+                          }
+ 
+                         },
+ 
+                         onend(u)
+                         {
+ 
+ 
+                          let _p =  _room.getPlayerDiscProperties(u.id);
+ 
+                         //_room.setPlayerDiscProperties(u.id, _xyprev)
+ 
+ 
+ 
+ 
+                         },
+ 
+ 
+                       },
+ 
+ 
+                       //////////////
+ 
+                      'drain':
+                       {
+                        precio:15,
+                        atajo:'d',
+                        descripcion:" ",
+                        tt:[0, 22*20],
+                        player:"",
+                        delete:[['kill'],'own'],
+                        disable_avatar_update:'own',
+                        repeat:0,
+                        drain_tt:[0,4],
+                        icon_tt:[0,50,   1],
+ 
+                        onend_on_goal:1,
+ 
+                        onload(u)
+                         {
+ 
+                          let _p =  _room.getPlayerDiscProperties(u.id);
+                          _room.setPlayerAvatar(u.id,'🎃')
+ 
+ 
+                         },
+ 
+                         enterframe(u)
+                         {
+                          let _p =  _room.getPlayerDiscProperties(u.id);
+ 
+                          let _ps = _room.getPlayerList();
+ 
+                          //actualizar_icono
+                          this.icon_tt[0]++;
+                          if(this.icon_tt[0]>this.icon_tt[1])
+                          {
+                            this.icon_tt[0]=0;
+ 
+                            if(this.icon_tt[2]==0 )
+                            {
+                            _room.setPlayerAvatar(u.id,'🎃')  
+                            this.icon_tt[2]=1;
+ 
+                           // _room.sendAnnouncement("0")
+                            }
+ 
+                            else
+                            {
+                            _room.setPlayerAvatar(u.id, get_custom_var(u, 'magic').toString() );
+ 
+                           // _room.sendAnnouncement("1")
+                            this.icon_tt[2]=0;
+                            }
+ 
+                          }
+ 
+ 
+                         //     _room.sendAnnouncement("dasdsa");
+                          this.drain_tt[0]++;
+                          if(this.drain_tt[0]>this.drain_tt[1])
+                          {
+                            this.drain_tt[0]=0;
+ 
+                              for(var _u of _ps)
+                              {
+                                let _up = _room.getPlayerDiscProperties(_u.id);
+ 
+                                let _1magic = get_custom_var(u, 'magic');
+                                let _2magic = get_custom_var(_u,'magic');
+ 
+ 
+                                if(_u.team>0&& _u.id!==u.id&&
+                                   _2magic>0&&_1magic<99&&                       //32
+                                   get_distance(_p.x, _p.y, _u.position.x, _u.position.y)<(32-15-15)+_p.radius+_up.radius)
+                                {
+ 
+                        //          _message.send('!', {color: 0xFF0000} );
+ 
+                                  set_custom_var(u,  ['magic', _1magic +1    ]); 
+                                  set_custom_var(_u, ['magic', _2magic -1  ]);
+ 
+                                  this.icon_tt[0]=0;
+                                  this.icon_tt[2]=0;
+                                  _room.setPlayerAvatar(u.id, get_custom_var(u, 'magic').toString() );
+ 
+ 
+                                 // update_magic('all');
+                                  update_magic(u);
+                                  update_magic(_u);
+ 
+                                }
+                              }
+                          }
+ 
+                         },
+ 
+                         onend(u)
+                         {
+ 
+ 
+                          let _p =  _room.getPlayerDiscProperties(u.id);
+                          update_magic('all');          
+                         //_room.setPlayerDiscProperties(u.id, _xyprev)
+ 
+ 
+ 
+ 
+                         },
+ 
+ 
+                       },
+ 
+ 
+ 
+/*                       'lock':
+                       {
+                        precio:50,
+                        atajo:'lock',
+                        descripcion:" ",
+                        tt:[0,60*5],
+                        player:"",
+                        delete:[['lock'],'ownteam' ],
+                        disable_avatar_update:'otherteam', //!
+                        repeat:0, //pulir -> actualmente solo evita repetcion en el mismo jugador
+ 
+                        onload(u)
+                         {
+ 
+                         	  let _flip = flip_12(u.team);
+                              let _c = ["", COL.disc.pl1_lock, COL.disc.pl2_lock]
+ 
+                              if(_team_color[_flip] !== COL.disc.pl_negros)
+                             	  set_team_color(_flip,  _c[_flip]);
+ 
+ 
+                             this._team = get_team(u.team);
+ 
+                              to_all(function(e){
+ 
+                                      _room.setPlayerAvatar(e.id,'🔒')
+ 
+                                      set_custom_var(e, ['locked', [Math.floor(e.position.x), Math.floor(e.position.y) ] ])
+ 
+                                       },  this._team )
+ 
+ 
+                         },
+ 
+                         enterframe(u)
+                         {
+ 
+ 
+                              to_all(function(e){
+                                      let _lo = _custom_vars[e.id].locked;
+                                       if(_lo)
+                                       {
+ 
+                                      let _p =  _room.getPlayerDiscProperties(e.id);
+ 
+                                      // _room.setPlayerDiscProperties(e.id, { x:_lo[0], y:_lo[1],  xspeed:0, yspeed : 0} )
+                                      _room.setPlayerDiscProperties(e.id, { xspeed: _p.xspeed, 
+                                                                            yspeed: -_p.yspeed} )
+ 
+                                       }
+ 
+                                       }, this._team )
+ 
+ 
+ 
+                         },
+ 
+                         onend(u)
+                         {
+ 
+ 
+                         	  let _flip = flip_12(u.team);
+                              let _c = ["", COL.disc.pl1, COL.disc.pl2];
+ 
+                         	  set_team_color(_flip,  _c[_flip]);
+ 
+ 
+                              to_all(function(e){
+ 
+                                      set_custom_var(e, ['locked',0])
+ 
+                                       },  get_team(u.team) )
+ 
+ 
+                              //_room.sendAnnouncement("end")
+ 
+                               update_magic('all');
+ 
+                         },
+ 
+ 
+                       },
+  */                    
+ 
+ 
+                       'barrera':
+                       {
+                        precio:20,
+                        atajo:'ba',
+                        descripcion:" ",
+                        tt:[0,60*8],
+                        disc_n:0,
+                        player:"",
+                        delete:[[],'ownteam' ],
+                        repeat:0,
+ 
+                        _tt:[0,10],
+ 
+ 
+                        onload(u)
+                         {
+                          let _p = ["", 0,2];
+                            this.disc_n= 5*u.team;
+                             for(var i =0;i<5;i++)
+                             {
+                             _room.setDiscProperties(this.disc_n+i,  {x:    _room.goal_pos[_p[u.team]].x, 
+                             	                                      y:   _room.goal_pos[_p[u.team]].y+39+(30*i),
+                                                                      color:random_hex(6), 
+                             	                                         });
+                             }
+ 
+                        //    _room.setDiscProperties(2, {x:-200,10});
+ 
+                         },
+                         enterframe(u)
+                         {
+ 
+                             this._tt[0]++;
+                             if(this._tt[0]>this._tt[1])
+                             {
+	                            this._tt[0]=0;
+	                           // let _p = ["", 0,2];
+ 
+                              if(_room.getPlayerList().length<=4)
+                              {
+	                              for(var i =this.disc_n;i<this.disc_n+5;i++)
+	                              {
+	                              _room.setDiscProperties(i,  {color:random_hex(6)  });
+	                              }
+                              }
+ 
+                             }
+ 
+                         },
+ 
+                         onend(e)
+                         {
+                          reset_discs(this.disc_n, this.disc_n+5);
+                          //  _room.setDiscProperties(0, {x: 0});
+                          //  _room.setDiscProperties(1, {x: 0});
+ 
+ 
+                         },
+ 
+ 
+                       },
+ 
+ 
+ 
+                       'bot':
+                       {
+                        precio:70,
+                        atajo:'bot',
+                        descripcion:" ",
+                        tt:[0,60*90],
+                        disc_n:0,
+                        player:"",
+                        delete:[[],'ownteam' ],
+                        repeat:0,
+ 
+                        _tt:[0,10],
+ 
+ 
+                        onload(u)
+                         {
+                         this.bot = _botges.crear_bot(u.team); 
+                         },
+ 
+                         onend(e)
+                         {
+                         	_message.send('Bot destruido');
+                          this.bot.delete();
+ 
+                         },
+ 
+ 
+                       },//bot
+ 
+ 
+ 
+ 
+     }
+ 
+ 
+ 
+ 
+  //DEBUG; 'descomentar' para reducir precio de los items a 0
+//  for(var i in _poderes)
+//	_poderes[i].precio=0;
+ 
+ 
+ 
+ 
+ 
+ 
+     var _efectos_activos=[];
+ 
+ 
+    function get_team(f_n)
+    {
+         let _ret = [];
+ 
+         let _l = _room.getPlayerList();
+ 
+         for(var u of _l)
+         {
+               if(u.team==f_n)
+               {
+               _ret.push(u);
+               }
+         }        
+         return(_ret)    
+ 
+    }
+ 
+     function to_all(f_func, f_except = [])
+     {
+        if(get_type(f_except)=='object' )
+         f_except=[f_except];
+ 
+        let _l = _room.getPlayerList();
+ 
+ 
+ 
+         outer:
+         for(var u of _l)
+         {
+             for(var _u of f_except)
+             {
+             	if(u.id==_u.id)
+             	continue outer;
+             }
+               f_func(u);
+ 
+         }
+ 
+     }
+ 
+     function reset_discs(f_min=5, f_max=15)
+     {
+           for(var i =5;	i<15;i++)
+            {
+              _room.setDiscProperties(i,  {x: 0,y:-500});
+ 
+             } 
+ 
+     }
+ 
+ 
+                             //para ambos: [  , ]
+     function set_team_color(f_id=[ [COL.disc.pl1], [COL.disc.pl2] ],   f_color,  f_avatar_color=0xFFFFFF, f_angle=0)
+     {
+   // _room.setTeamColors(2, 0, 0xFFFFFF, [0x000000]);       
+      if(get_type(f_id)=='array')
+      {
+           for(var i =0;i<2;i++)
+           {
+           	set_team_color(i+1, ...f_id[i])
+           }
+ 
+      return
+      }
+ 
+ 
+ 
+ 
+//_room.sendAnnouncement(f_color.toString() )
+      _room.setTeamColors(f_id, f_angle, f_avatar_color,   [ f_color ] )
+ 
+ 
+      set_custom_var(f_id, ['color', f_color]);
+ 
+      _team_color[f_id] = f_color;
+ 
+     }
+ 
+     var _team_color = ["", 0,0];
+ 
+ 
+ 
+     function update_magic(u, f_n, f_addmin = 0)
+     {
+ 
+ 
+        if(u=='all')
+        {
+          let _l = _room.getPlayerList();
+           for(var uu of _l)
+           {
+            update_magic(uu, f_n, f_addmin, 0);
+           }
+ 
+          return;
+        }
+ 
+ 
+        if(f_n==undefined)
+        {
+          f_n = get_custom_var(u,'magic');
+          f_addmin=0;
+        }
+ 
+ 
+        if(f_addmin==1)
+          f_n = get_custom_var(u,'magic')+f_n;
+ 
+ 
+        if(f_addmin==2)
+          f_n = get_custom_var(u,'magic')-f_n;
+ 
+ 
+         if(f_n>99)
+         	f_n=99;
+ 
+        set_custom_var(u, ['magic', f_n]);
+ 
+ 
+ 
+         for(var o of _efectos_activos)
+       	 {
+           if(o.disable_avatar_update &&
+             (
+               o.disable_avatar_update=='all' ||
+               o.disable_avatar_update=='own'       && u.id   ==   o.player.id     ||
+               o.disable_avatar_update=='other'     && u.id   !==  o.player.id   || 
+               o.disable_avatar_update=='ownteam'   && u.team ==   o.player.team ||
+               o.disable_avatar_update=='otherteam' && u.team !==  o.player.team 
+ 
+             )  
+             )
+           {
+            //_room.sendAnnouncement(o.disable_avatar_update);
+ 
+            return;
+ 
+           }
+ 
+       	 }
+ 
+        _room.setPlayerAvatar(u.id, f_n.toString() );
+ 
+ 
+     }
+ 
+     var _custom_vars=
+       {
+ 
+       }
+                        //[nombre, valor]
+     function set_custom_var(u, f_data)
+     {
+ 
+      if(u=='all')
+      {
+       let _l = _room.getPlayerList();
+ 
+        for(var uu of _l)
+        {
+          set_custom_var(uu, f_data);
+        }
+       return false;
+      }
+ 
+      //por equipo
+      if(u==1||u==2)
+      {
+       let _l = _room.getPlayerList();
+ 
+        for(var uu of _l)
+        {
+          if(uu.team==u)
+          set_custom_var(uu, f_data);
+        }
+       return false;
+      }
+ 
+ 
+ 
+      if(_custom_vars[u.id]==undefined) 
+        _custom_vars[u.id] = {};
+ 
+ 
+        _custom_vars[u.id][f_data[0]] = f_data[1];
+ 
+     }
+ 
+     function get_custom_var(u, f_var)
+     {
+ 
+       return(_custom_vars[u.id.toString() ][f_var])
+ 
+     }
+ 
+ 
+ 
+var goalpos = ["",{x:-700,y:0},{x:700,y:0}   ];
+ 
+ 
+ 
+var _botges =
+   {
+   	id:[15,16,17,18,19],
+ 
+    bots:[],
+ 
+    delete()
+    {
+     this.bots=[];
+    }, 
+    ini()
+    {
+	    for(var i of this.id)
+	    {
+	     _room.setDiscProperties(i, {x:0, y:-400  } );
+ 
+	    }
+ 
+ 
+ 
+    },
+    send_event(f_event)
+    {
+      for(var u of this.bots)
+      {
+       u[f_event]();
+      }
+    },
+    crear_bot(f_team)
+    {
+ 
+       let _id = clone_array(this.id);
+       for(var i = this.bots.length-1;i>=0;i--)
+       {
+       	  let u = this.bots[i];
+ 
+           for(var j = 0;j<_id.length;j++)
+           {
+           	if(u.id==_id[j])
+           	{
+             _id.splice(j,1);
+           	 break;
+           	}
+ 
+           }
+ 
+       }
+       if(_id.length==0)
+          return;
+ 
+       _id = _id[0];
+       //_room.sendAnnouncement(_id.toString() )
+ 
+ 
+       let _bot =
+              {
+              	id:_id,
+ 
+			    xvel:  0,
+			    yvel:  0,
+			    mvel:  2,
+			    des:[0,0],
+			    team:f_team, //1,2
+                delete()
+                {
+                   for(var i =0; i<  _botges.bots.length;i++)
+                   {
+                          let u = _botges.bots[i];
+                          if(u.id==this.id)
+                          {
+                          	_botges.bots.splice(i,1);
+                            _room.setDiscProperties(this.id, {x:0, y:-400  } );
+ 
+                          	break;
+                          }
+                   }
+ 
+                },
+              	onload()
+              	{
+       		    let _color = ["", COL.disc.pl1,COL.disc.pl2 ]
+ 
+               	_room.setDiscProperties(this.id,  {x:goalpos[this.team].x , y:0, radius: 15, color:_color[this.team] });
+ 
+              	},
+              	reset()
+              	{
+                let _color = ["", COL.disc.pl1,COL.disc.pl2 ]
+ 
+                _room.setDiscProperties(this.id,  {x:goalpos[this.team].x , y:0, radius: 15, color:_color[this.team] });
+ 
+              	},
+              	run()
+              	{
+ 
+ 
+ 
+                     //f_x, f_y,  degrees, dis
+ 
+                    let _goalpos = goalpos[ flip_12(this.team) ];
+ 
+					let _p =_room.getDiscProperties(this.id);
+					let _b =_room.getDiscProperties(0);
+ 
+					let _dis      = Math.floor(get_distance(_p.x,_p.y, _b.x, _b.y ) );
+                    let _dis_arco = Math.floor(get_distance(_p.x,_p.y, _goalpos.x, _goalpos.y ) );
+ 
+ 
+ 
+ 
+                    let __dis = (-_dis/2);
+                //     _dis = 10;
+ 
+                   //alejar en kickoff
+                   if(_room.firstKick==0)                    
+                     {
+                      __dis = - 100;
+                     }
+ 
+ 
+                    let _moveangle=move_by_degrees( _b.x,_b.y, angle360(_b.x,_b.y,   _goalpos.x,_goalpos.y ),__dis  );
+ 
+                    this.des =[_moveangle.x,_moveangle.y      ];
+                    let _des = this.des;
+ 
+ 
+ 
+                    // _room.setDiscProperties(1, {radius:1, x:_moveangle.x-100,y:_moveangle.y})
+ 
+ 
+                    //pase
+                    var _l = _room.getPlayerList();
+                     for(var u of _l)
+                     {
+                     	if(u.team==this.team)
+                     	{
+                     		if(_dis<30 && ( Math.floor(angle360(_p.x, _p.y,  _b.x, _b.y)/20)*20 == Math.floor(angle360(_p.x, _p.y,  u.position.x, u.position.y)/20)*20   )    )
+                     		{
+                     		let _rand = Math.random();
+                          	_room.setDiscProperties(0, {xspeed:-(_p.x-_b.x)/(4+_rand) ,
+                          	                            yspeed:-(_p.y-_b.y)/(4+_rand) })
+ 
+ 
+                     		}
+ 
+                     	}
+                     }
+ 
+                     //tirar al arco
+                     if(_dis<30 && _dis_arco<400 && ( Math.floor(angle360(_p.x, _p.y,  _b.x, _b.y)/30)*30 == Math.floor(angle360(_p.x, _p.y,  _goalpos.x, _goalpos.y)/30)*30   )    )
+                     { 
+ 
+                   			let _rand = Math.random();
+                          	_room.setDiscProperties(0, {xspeed:-(_p.x-_b.x)/(4+_rand) ,
+                          	                            yspeed:-(_p.y-_b.y)/(4+_rand) })
+                     }
+ 
+ 
+ 
+					//demonio
+					_room.setDiscProperties(this.id,  {xspeed:  this.xvel,
+					                                   yspeed:  this.yvel,
+					                                   //x:_des[0],
+					                                   //y:_des[1]
+					                                   }
+					                                   )
+ 
+ 
+					 if(_p.x<_des[0])
+					 {
+					 	this.xvel += (this.mvel-this.xvel)/30;
+					 }
+ 
+					 if(_p.x>_des[0])
+					 {
+					 	this.xvel += (	(-this.mvel)-this.xvel)/30;
+					 }
+ 
+ 
+					 if(_p.y<_des[1])
+					 {
+					 	this.yvel += (this.mvel-this.yvel)/30;
+					 }
+ 
+					 if(_p.y>_des[1])
+					 {
+					 	this.yvel += ((-this.mvel)-this.yvel)/30;
+					 }
+ 
+ 
+ 
+ 
+					// _room.sendAnnouncement(Math.floor(get_distance(_p.x,_p.y, _b.x, _b.y ) ).toString() )
+ 
+ 
+ 
+              	},//run
+ 
+              }
+ 
+        this.bots.push(_bot);
+        _bot.onload();
+ 
+        return(_bot)
+ 
+    },
+ 
+ 
+   }
+ 
+ 
+ 
+ 
+var _x, _y, _id, _name,_team; 
+ 
+ 
+_room.tt=[0,30];
+_room.firstKick=0;                    
+_room.efecto_tt=[0,60*3];
+ 
+ 
+  _room.onGameTick=function()
+{
+ 
+ 
+ 
+ 
+ for(var u of _botges.bots)
+ {
+ 	u.run();
+ }
+ 
+  ///evitar efecto iman al ser golpeado el balon
+if(_poderes.iman.HIT_TT >0)
+ _poderes.iman.HIT_TT--;
+ 
+ 
+  for(var i = _efectos_activos.length-1; i>=0;i--)
+  {
+    let u = _efectos_activos[i];
+ 
+    if(u.enterframe!==undefined)
+    u.enterframe(u.player);
+ 
+    u.tt[0]++;
+    if(u.tt[0]>=[u.tt[1]])
+    {
+      _efectos_activos.splice(i,1);
+ 
+      if(u.onend!==undefined)
+         u.onend(u.player);
+ 
+    }
+  }
+ 
+ 
+if( _room.firstKick==1)
+{             
+	_room.efecto_tt[0]++;
+	if(_room.efecto_tt[0]>_room.efecto_tt[1])
+	{
+	 update_magic('all', 1,1);
+ 
+	_room.efecto_tt[0]=0;
+	}
+}
+ 
+ 
+  _room.tt[0]++;
+ 
+   if(_room.tt[0]>_room.tt[1])
+   {
+     _room.tt[0]=0;
+    // update_magic('all', 1,1);
+ 
+     //control firstKick
+      if(_room.getBallPosition().x!==0)
+       _room.firstKick=1;
+ 
+ 
+ 
+                    let _list = _room.getPlayerList();
+ 
+                         for(var u of _list)
+                       {
+ 
+                           if(u.position!==null)
+                          {
+ 
+                           _x       = u.position.x;
+                           _y       = u.position.y;
+                           _id      = u.id;
+                           _name = u.name;
+                           _team = u.team;
+ 
+                          if(_maps[_room.mapName]!==undefined && [_room.mapName].run!==undefined)
+                          _maps[_room.mapName].run(u);
+ 
+                         }
+                      }
+ 
+        }
+ 
+ 
+}
+ 
+ 
+ 
+var _MAP =
+`
+ 
+ 
+{
+  "name": "MagicWorldGrass",
+  "width": 800,
+  "height": 350,
+  "spawnDistance": 350,
+  "bg": {
+    "type": "grass",
+    "width": 700,
+    "height": 320,
+    "kickOffRadius": 80,
+    "cornerRadius": 0,
+    "color": "555555"
+  },
+  "vertexes": [
+    {
+      "x": -700,
+      "y": 320,
+      "trait": "ballArea",
+      "bias": -50,
+      "_data": {
+        "mirror": {}
+      }
+    },
+    {
+      "x": -700,
+      "y": 100,
+      "trait": "ballArea",
+      "bias": -50
+    },
+    {
+      "x": -700,
+      "y": -100,
+      "trait": "ballArea",
+      "bias": -50
+    },
+    {
+      "x": -700,
+      "y": -320,
+      "trait": "ballArea",
+      "bias": -50
+    },
+    {
+      "x": 700,
+      "y": 320,
+      "trait": "ballArea",
+      "bias": 50
+    },
+    {
+      "x": 700,
+      "y": 100,
+      "trait": "ballArea",
+      "bias": 50
+    },
+    {
+      "x": 700,
+      "y": -100,
+      "trait": "ballArea",
+      "bias": 50
+    },
+    {
+      "x": 700,
+      "y": -320,
+      "trait": "ballArea",
+      "bias": 50
+    },
+    {
+      "x": 0,
+      "y": 350,
+      "trait": "kickOffBarrier"
+    },
+    {
+      "x": 0,
+      "y": 80,
+      "trait": "kickOffBarrier"
+    },
+    {
+      "x": 0,
+      "y": -80,
+      "trait": "kickOffBarrier"
+    },
+    {
+      "x": 0,
+      "y": -350,
+      "trait": "kickOffBarrier"
+    },
+    {
+      "x": -710,
+      "y": -100,
+      "trait": "goalNet"
+    },
+    {
+      "x": -730,
+      "y": -80,
+      "trait": "goalNet"
+    },
+    {
+      "x": -730,
+      "y": 80,
+      "trait": "goalNet"
+    },
+    {
+      "x": -710,
+      "y": 100,
+      "trait": "goalNet"
+    },
+    {
+      "x": 710,
+      "y": -100,
+      "trait": "goalNet"
+    },
+    {
+      "x": 730,
+      "y": -80,
+      "trait": "goalNet"
+    },
+    {
+      "x": 730,
+      "y": 80,
+      "trait": "goalNet"
+    },
+    {
+      "x": 710,
+      "y": 100,
+      "trait": "goalNet"
+    },
+    {
+      "x": -45.89961961961962,
+      "y": 8.811742777260019,
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ],
+      "color": "c7e6bd"
+    },
+    {
+      "x": 36.651317524420975,
+      "y": 24.376514445479962,
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ],
+      "color": "c7e6bd"
+    },
+    {
+      "x": -46.24358185771979,
+      "y": 8.379388008698353,
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ],
+      "color": "c7e6bd"
+    },
+    {
+      "x": -22.16622519070795,
+      "y": 5.352904628766698,
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ],
+      "color": "c7e6bd"
+    },
+    {
+      "x": 16.013583238410824,
+      "y": 14,
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ],
+      "color": "c7e6bd"
+    },
+    {
+      "x": -5.3120755237996615,
+      "y": -40.044346070208135,
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ],
+      "color": "c7e6bd"
+    },
+    {
+      "x": 51.09773152462808,
+      "y": -27.938412550481516,
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ],
+      "color": "c7e6bd"
+    },
+    {
+      "x": 17.3894321908115,
+      "y": -25.776638707673186,
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ],
+      "color": "c7e6bd"
+    },
+    {
+      "x": -21.134338476407443,
+      "y": -7.185383659521591,
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ],
+      "color": "c7e6bd"
+    },
+    {
+      "x": 16.357545476510992,
+      "y": 1.0293569431500469,
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ],
+      "color": "c7e6bd"
+    }
+  ],
+  "segments": [
+    {
+      "v0": 0,
+      "v1": 1,
+      "trait": "ballArea",
+      "bias": -50
+    },
+    {
+      "v0": 2,
+      "v1": 3,
+      "trait": "ballArea",
+      "bias": -50
+    },
+    {
+      "v0": 4,
+      "v1": 5,
+      "trait": "ballArea",
+      "bias": 50
+    },
+    {
+      "v0": 6,
+      "v1": 7,
+      "trait": "ballArea",
+      "bias": 50
+    },
+    {
+      "v0": 12,
+      "v1": 13,
+      "curve": -90,
+      "trait": "goalNet"
+    },
+    {
+      "v0": 13,
+      "v1": 14,
+      "trait": "goalNet"
+    },
+    {
+      "v0": 14,
+      "v1": 15,
+      "curve": -90,
+      "trait": "goalNet"
+    },
+    {
+      "v0": 16,
+      "v1": 17,
+      "curve": 90,
+      "trait": "goalNet"
+    },
+    {
+      "v0": 17,
+      "v1": 18,
+      "trait": "goalNet"
+    },
+    {
+      "v0": 18,
+      "v1": 19,
+      "curve": 90,
+      "trait": "goalNet"
+    },
+    {
+      "v0": 8,
+      "v1": 9,
+      "trait": "kickOffBarrier"
+    },
+    {
+      "v0": 9,
+      "v1": 10,
+      "curve": 180,
+      "cGroup": [
+        "blueKO"
+      ],
+      "trait": "kickOffBarrier"
+    },
+    {
+      "v0": 9,
+      "v1": 10,
+      "curve": -180,
+      "cGroup": [
+        "redKO"
+      ],
+      "trait": "kickOffBarrier"
+    },
+    {
+      "v0": 10,
+      "v1": 11,
+      "trait": "kickOffBarrier"
+    },
+    {
+      "v0": 20,
+      "v1": 21,
+      "curve": -87.6320449278542,
+      "color": "c7e6bd",
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ]
+    },
+    {
+      "v0": 22,
+      "v1": 23,
+      "curve": -5.121938953248704,
+      "color": "c7e6bd",
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ]
+    },
+    {
+      "v0": 21,
+      "v1": 24,
+      "color": "c7e6bd",
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ]
+    },
+    {
+      "v0": 24,
+      "v1": 23,
+      "curve": 64.8750475100362,
+      "color": "c7e6bd",
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ]
+    },
+    {
+      "v0": 23,
+      "v1": 25,
+      "curve": 33.76121177367325,
+      "color": "c7e6bd",
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ]
+    },
+    {
+      "v0": 25,
+      "v1": 26,
+      "curve": 64.84087436301358,
+      "color": "c7e6bd",
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ]
+    },
+    {
+      "v0": 24,
+      "v1": 27,
+      "curve": 0.758533996375372,
+      "color": "c7e6bd",
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ]
+    },
+    {
+      "v0": 27,
+      "v1": 26,
+      "curve": 23.788796289901207,
+      "color": "c7e6bd",
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ]
+    },
+    {
+      "v0": 28,
+      "v1": 29,
+      "curve": 30.510227133778717,
+      "color": "c7e6bd",
+      "bCoef": 0.5,
+      "cMask": [
+        "c2"
+      ],
+      "cGroup": [
+        "ball"
+      ]
+    }
+  ],
+  "goals": [
+    {
+      "p0": [
+        -700,
+        100
+      ],
+      "p1": [
+        -700,
+        -100
+      ],
+      "team": "red",
+      "_data": {
+        "mirror": {}
+      }
+    },
+    {
+      "p0": [
+        700,
+        100
+      ],
+      "p1": [
+        700,
+        -100
+      ],
+      "team": "blue"
+    },
+    {
+      "p0": [
+        -703,
+        100
+      ],
+      "p1": [
+        -703,
+        -100
+      ],
+      "team": "red",
+      "_data": {
+        "mirror": {}
+      }
+    },
+    {
+      "p0": [
+        -706,
+        101
+      ],
+      "p1": [
+        -706,
+        -99
+      ],
+      "team": "red",
+      "_data": {
+        "mirror": {}
+      }
+    },
+    {
+      "p0": [
+        -709,
+        104
+      ],
+      "p1": [
+        -709,
+        -96
+      ],
+      "team": "red",
+      "_data": {
+        "mirror": {}
+      }
+    },
+    {
+      "p0": [
+        -712,
+        105
+      ],
+      "p1": [
+        -712,
+        -95
+      ],
+      "team": "red",
+      "_data": {
+        "mirror": {}
+      }
+    }
+  ],
+  "discs": [
+    {
+      "invMass": 0,
+      "pos": [
+        -700,
+        100
+      ],
+      "color": "FFCCCC",
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ]
+    },
+    {
+      "invMass": 0,
+      "pos": [
+        -700,
+        -100
+      ],
+      "color": "FFCCCC",
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ]
+    },
+    {
+      "invMass": 0,
+      "pos": [
+        700,
+        100
+      ],
+      "color": "CCCCFF",
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ]
+    },
+    {
+      "invMass": 0,
+      "pos": [
+        700,
+        -100
+      ],
+      "color": "CCCCFF",
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ]
+    },
+    {
+      "invMass": 0,
+      "pos": [
+        -738,
+        -291
+      ],
+      "color": "FFCCCC",
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ]
+    },
+    {
+      "invMass": 0,
+      "pos": [
+        -736,
+        -267
+      ],
+      "color": "FFCCCC",
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ]
+    },
+    {
+      "invMass": 0,
+      "pos": [
+        -737,
+        -245
+      ],
+      "color": "FFCCCC",
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ]
+    },
+    {
+      "invMass": 0,
+      "pos": [
+        -737,
+        -221
+      ],
+      "color": "FFCCCC",
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ]
+    },
+    {
+      "invMass": 0,
+      "pos": [
+        -740,
+        -194
+      ],
+      "color": "FFCCCC",
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ]
+    },
+    {
+      "invMass": 0,
+      "pos": [
+        -714,
+        -294
+      ],
+      "color": "FFCCCC",
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ]
+    },
+    {
+      "invMass": 0,
+      "pos": [
+        -715,
+        -245
+      ],
+      "color": "FFCCCC",
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ]
+    },
+    {
+      "invMass": 0,
+      "pos": [
+        -715,
+        -221
+      ],
+      "color": "FFCCCC",
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ]
+    },
+    {
+      "invMass": 0,
+      "pos": [
+        -718,
+        -194
+      ],
+      "color": "FFCCCC",
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ]
+    },
+    {
+      "invMass": 0,
+      "pos": [
+        -714,
+        -269
+      ],
+      "color": "FFCCCC",
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ]
+    },
+    {
+      "invMass": 0.5,
+      "pos": [
+        -780,
+        -163
+      ],
+      "color": "FFCCCC",
+      "bCoef": 0.5,
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ],
+      "cGroup": [
+        "ball"
+      ],
+      "damping": 0.96
+    },
+    {
+      "invMass": 0.5,
+      "pos": [
+        -781,
+        -114
+      ],
+      "color": "FFCCCC",
+      "bCoef": 0.5,
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ],
+      "cGroup": [
+        "ball"
+      ],
+      "damping": 0.96
+    },
+    {
+      "invMass": 0.5,
+      "pos": [
+        -781,
+        -90
+      ],
+      "color": "FFCCCC",
+      "bCoef": 0.5,
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ],
+      "cGroup": [
+        "ball"
+      ],
+      "damping": 0.96
+    },
+    {
+      "invMass": 0.5,
+      "pos": [
+        -784,
+        -63
+      ],
+      "color": "FFCCCC",
+      "bCoef": 0.5,
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ],
+      "cGroup": [
+        "ball"
+      ],
+      "damping": 0.96
+    },
+    {
+      "invMass": 0.5,
+      "pos": [
+        -780,
+        -138
+      ],
+      "color": "FFCCCC",
+      "bCoef": 0.5,
+      "cMask": [
+        "red",
+        "blue",
+        "ball"
+      ],
+      "cGroup": [
+        "ball"
+      ],
+      "damping": 0.96
+    }
+  ],
+  "planes": [
+    {
+      "normal": [
+        0,
+        1
+      ],
+      "dist": -320,
+      "trait": "ballArea",
+      "_data": {
+        "extremes": {
+          "normal": [
+            0,
+            1
+          ],
+          "dist": -320,
+          "canvas_rect": [
+            -800,
+            -350,
+            800,
+            350
+          ],
+          "a": [
+            -800,
+            -320
+          ],
+          "b": [
+            800,
+            -320
+          ]
+        }
+      }
+    },
+    {
+      "normal": [
+        0,
+        -1
+      ],
+      "dist": -320,
+      "trait": "ballArea",
+      "_data": {
+        "extremes": {
+          "normal": [
+            0,
+            -1
+          ],
+          "dist": -320,
+          "canvas_rect": [
+            -800,
+            -350,
+            800,
+            350
+          ],
+          "a": [
+            -800,
+            320
+          ],
+          "b": [
+            800,
+            320
+          ]
+        },
+        "mirror": {}
+      }
+    },
+    {
+      "normal": [
+        0,
+        1
+      ],
+      "dist": -350,
+      "bCoef": 0.1,
+      "_data": {
+        "extremes": {
+          "normal": [
+            0,
+            1
+          ],
+          "dist": -350,
+          "canvas_rect": [
+            -800,
+            -350,
+            800,
+            350
+          ],
+          "a": [
+            -800,
+            -350
+          ],
+          "b": [
+            800,
+            -350
+          ]
+        }
+      }
+    },
+    {
+      "normal": [
+        0,
+        -1
+      ],
+      "dist": -350,
+      "bCoef": 0.1,
+      "_data": {
+        "extremes": {
+          "normal": [
+            0,
+            -1
+          ],
+          "dist": -350,
+          "canvas_rect": [
+            -800,
+            -350,
+            800,
+            350
+          ],
+          "a": [
+            -800,
+            350
+          ],
+          "b": [
+            800,
+            350
+          ]
+        }
+      }
+    },
+    {
+      "normal": [
+        1,
+        0
+      ],
+      "dist": -800,
+      "bCoef": 0.1,
+      "_data": {
+        "extremes": {
+          "normal": [
+            1,
+            0
+          ],
+          "dist": -800,
+          "canvas_rect": [
+            -800,
+            -350,
+            800,
+            350
+          ],
+          "a": [
+            -800,
+            -350
+          ],
+          "b": [
+            -800,
+            350
+          ]
+        }
+      }
+    },
+    {
+      "normal": [
+        -1,
+        0
+      ],
+      "dist": -800,
+      "bCoef": 0.1,
+      "_data": {
+        "extremes": {
+          "normal": [
+            -1,
+            0
+          ],
+          "dist": -800,
+          "canvas_rect": [
+            -800,
+            -350,
+            800,
+            350
+          ],
+          "a": [
+            800,
+            -350
+          ],
+          "b": [
+            800,
+            350
+          ]
+        }
+      }
+    }
+  ],
+  "traits": {
+    "ballArea": {
+      "vis": false,
+      "bCoef": 1,
+      "cMask": [
+        "ball"
+      ]
+    },
+    "goalPost": {
+      "radius": 8,
+      "invMass": 0,
+      "bCoef": 0.5
+    },
+    "goalNet": {
+      "vis": true,
+      "bCoef": 0.1,
+      "cMask": [
+        "ball"
+      ]
+    },
+    "kickOffBarrier": {
+      "vis": false,
+      "bCoef": 0.1,
+      "cGroup": [
+        "redKO",
+        "blueKO"
+      ],
+      "cMask": [
+        "red",
+        "blue"
+      ]
+    }
+  },
+  "joints": [],
+  "redSpawnPoints": [],
+  "blueSpawnPoints": [],
+  "canBeStored": false,
+  "cameraWidth": 0,
+  "cameraHeight": 0,
+  "maxViewWidth": 0,
+  "cameraFollow": "ball",
+  "kickOffReset": "partial",
+  "playerPhysics": {
+    "radius": 15,
+    "bCoef": 0.5,
+    "invMass": 0.5,
+    "damping": 0.96,
+    "cGroup": [
+      "red",
+      "blue"
+    ],
+    "acceleration": 0.1,
+"gravity": [
+      0,
+      0
+    ],
+    "kickingAcceleration": 0.07,
+    "kickingDamping": 0.96,
+    "kickStrength": 5,
+    "kickback": 0
+  },
+  "ballPhysics": {
+    "radius": 9,
+    "bCoef": 0.5,
+    "cMask": [
+      "all"
+    ],
+    "damping": 0.99,
+    "invMass": 1,
+    "gravity": [
+      0,
+      0
+    ],
+    "color": "ffffff",
+    "cGroup": [
+      "ball"
+    ]
+  }
+}
+ 
+`
